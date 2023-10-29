@@ -9,18 +9,19 @@ const app = express();
 const PORT = 3030;
 dotenv.config();
 
-try{
-  var whitelist = ['http://localhost:5173', 'http://localhost:3030', 'https://mymamcet.vercel.app', 'https://mymamcet.up.railway.app']
+try {
+  var whitelist = ['http://localhost:5173', 'https://mymamcet.vercel.app', 'https://mymamcet.up.railway.app']
   var corsOptions = {
     origin: function (origin, callback) {
-        if (whitelist.indexOf(origin) !== -1) {
-            callback(null, true)
-        } else {
-            callback(new Error('Not allowed by CORS'))
-        }
+      if (whitelist.indexOf(origin) !== -1) {
+        callback(null, true)
+      } else {
+        callback(new Error('Not allowed by CORS'))
+      }
     }
-}  }
-catch{
+  }
+}
+catch {
   console.log('Unauthorized activity')
 }
 
@@ -31,9 +32,9 @@ app.use(express.json());
 // Firebase Initialize
 const adminIntialize = admin.initializeApp({
   credential: admin.credential.cert({
-      projectId: process.env.PROJECT_ID,
-      privateKey: process.env.PRIVATE_KEY ? process.env.PRIVATE_KEY.replace(/\\n/gm, "\n") : undefined,
-      clientEmail: process.env.CLIENT_EMAIL,
+    projectId: process.env.PROJECT_ID,
+    privateKey: process.env.PRIVATE_KEY ? process.env.PRIVATE_KEY.replace(/\\n/gm, "\n") : undefined,
+    clientEmail: process.env.CLIENT_EMAIL,
   }),
   databaseURL: process.env.DATABASE_URL
 });
@@ -41,15 +42,15 @@ const adminIntialize = admin.initializeApp({
 const auth = getAuth(adminIntialize)
 const db = getDatabase(adminIntialize);
 
-app.get('/fetch/exam/options', (req, res)=>{
+app.get('/fetch/exam/options', (req, res) => {
 
 
   const dbRef = db.ref('/search_options');
 
-  dbRef.once('value', ( snaphot) => {
-      
-      res.send({search_options: snaphot.val()})
-      res.end();
+  dbRef.once('value', (snaphot) => {
+
+    res.send({ search_options: snaphot.val() })
+    res.end();
   })
 
   // send department, batch, academic year, semester, subjects, exam type
@@ -59,12 +60,26 @@ app.get('/fetch/exam/options', (req, res)=>{
   // semester ----> V, etc
   // Subjects ----> SOft computing, etc
 
-} )
+})
 
-app.get('/fetch/exam/marks', (req, res)=>{
-  res.send({message: 'All good'})
+app.post('/fetch/exam/data', (req, res) => {
+  try {
+    const data = req.body.search_queries[0];
+
+    const dbRef = db.ref(`data/departments/${data.department}/${data.batch}/${data.academic_year}/${data.semester}/${data.exam_type}`)
+
+    dbRef.once('value', (snaphot) => {
+      if (snaphot.val() !== null) {
+        const header = snaphot.val().Headers;
+        const result = Object.values(snaphot.val().Students);
+        res.send({ result: result, header: header })
+      }
+      else { res.send({ result: null }) }
+    })
+  }
+  catch (e) {
+    console.log(e);
+  }
 });
 
-
-
-app.listen(PORT, ()=> console.log(`Server listening http://localhost:${PORT}/`))
+app.listen(PORT, () => console.log(`Server listening http://localhost:${PORT}/`))
