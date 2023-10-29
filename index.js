@@ -10,7 +10,7 @@ const PORT = 3030;
 dotenv.config();
 
 try{
-  var whitelist = ['http://localhost:5173', 'https://mymamcet.vercel.app/', 'https://mymamcet.up.railway.app/']
+  var whitelist = ['http://localhost:5173', 'http://localhost:3030', 'https://mymamcet.vercel.app', 'https://mymamcet.up.railway.app']
   var corsOptions = {
     origin: function (origin, callback) {
         if (whitelist.indexOf(origin) !== -1) {
