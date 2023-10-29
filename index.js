@@ -1,85 +1,111 @@
-import express from 'express'
-import cors from 'cors'
-import dotenv from 'dotenv'
-import admin from 'firebase-admin'
-import { getAuth } from 'firebase-admin/auth'
-import { getDatabase } from 'firebase-admin/database'
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import admin from 'firebase-admin';
+import { getAuth } from 'firebase-admin/auth';
+import { getDatabase } from 'firebase-admin/database';
 
 const app = express();
 const PORT = 3030;
 dotenv.config();
 
 try {
-  var whitelist = ['http://localhost:5173', 'https://mymamcet.vercel.app', 'https://mymamcet.up.railway.app']
+  var whitelist = [
+    'http://localhost:5173',
+    'https://mymamcet.vercel.app',
+    'https://mymamcet.up.railway.app',
+  ];
   var corsOptions = {
     origin: function (origin, callback) {
       if (whitelist.indexOf(origin) !== -1) {
-        callback(null, true)
+        callback(null, true);
       } else {
-        callback(new Error('Not allowed by CORS'))
+        callback(new Error('Not allowed by CORS'));
       }
-    }
-  }
-}
-catch {
-  console.log('Unauthorized activity')
+    },
+  };
+} catch (error) {
+  console.log('Unauthorized activity');
 }
 
 app.use(cors(corsOptions));
 app.use(express.json());
 
-
 // Firebase Initialize
 const adminIntialize = admin.initializeApp({
   credential: admin.credential.cert({
     projectId: process.env.PROJECT_ID,
-    privateKey: process.env.PRIVATE_KEY ? process.env.PRIVATE_KEY.replace(/\\n/gm, "\n") : undefined,
+    privateKey: process.env.PRIVATE_KEY
+      ? process.env.PRIVATE_KEY.replace(/\\n/gm, '\n')
+      : undefined,
     clientEmail: process.env.CLIENT_EMAIL,
   }),
-  databaseURL: process.env.DATABASE_URL
+  databaseURL: process.env.DATABASE_URL,
 });
 
-const auth = getAuth(adminIntialize)
+const auth = getAuth(adminIntialize);
 const db = getDatabase(adminIntialize);
 
-app.get('/fetch/exam/options', (req, res) => {
-
-
-  const dbRef = db.ref('/search_options');
-
-  dbRef.once('value', (snaphot) => {
-
-    res.send({ search_options: snaphot.val() })
-    res.end();
-  })
-
-  // send department, batch, academic year, semester, subjects, exam type
-  // department ---> IT, CSE, ECE, etc
-  //  batch ---> 2021 - 2025
-  // Academic year ---> 2023 - 2024, etc
-  // semester ----> V, etc
-  // Subjects ----> SOft computing, etc
-
-})
-
-app.post('/fetch/exam/data', (req, res) => {
+app.get('/fetch/exam/options', async (req, res) => {
   try {
-    const data = req.body.search_queries[0];
-
-    const dbRef = db.ref(`data/departments/${data.department}/${data.batch}/${data.academic_year}/${data.semester}/${data.exam_type}`)
-
-    dbRef.once('value', (snaphot) => {
-      if (snaphot.val() !== null) {
-        const header = snaphot.val().Headers;
-        const result = Object.values(snaphot.val().Students);
-        res.send({ result: result, header: header })
-      }
-      else { res.send({ result: null }) }
-    })
-  }
-  catch (e) {
-    console.log(e);
+    const dbRef = db.ref('/search_options');
+    const snaphot = await dbRef.once('value');
+    res.send({ search_options: snaphot.val() });
+  } catch (error) {
+    console.log(error);
+    res.status(500).send('Internal Server Error');
   }
 });
 
-app.listen(PORT, () => console.log(`Server listening http://localhost:${PORT}/`))
+app.post('/fetch/exam/data', async (req, res) => {
+  try {
+    const data = req.body.search_queries[0];
+    const dbRef = db.ref(
+      `data/departments/${data.department}/${data.batch}/${data.academic_year}/${data.semester}/${data.exam_type}`
+    );
+
+    const snaphot = await dbRef.once('value');
+
+    if (snaphot.val() !== null) {
+      const header = snaphot.val().Headers;
+      const result = Object.values(snaphot.val().Students);
+      res.send({ result: result, header: header });
+    } else {
+      res.send({ result: null });
+    }
+  } catch (error) {
+    console.log(error);
+    res.status(500).send('Internal Server Error');
+  }
+});
+
+app.get('/fetch/users/all', async (req, res) => {
+  try {
+    const listUsersResult = await admin.auth(adminIntialize).listUsers(10);
+    const users = listUsersResult.users.map((userRecord) => {
+      const name = userRecord.displayName;
+      const email = userRecord.email;
+      const role = userRecord.customClaims ? 'Has Claim' : 'No Claim';
+      return { Name: name, Email: email, Role: role };
+    });
+
+    res.send({ users: users });
+  } catch (error) {
+    console.log(error);
+    res.status(500).send('Internal Server Error');
+  }
+});
+
+app.post('/add/user', async (req, res) => {
+  try {
+    const { name, email, password } = req.body.data;
+    console.log(name);
+    // Add user logic here
+    res.send('User added successfully');
+  } catch (error) {
+    console.log(error);
+    res.status(500).send('Internal Server Error');
+  }
+});
+
+app.listen(PORT, () => console.log(`Server listening http://localhost:${PORT}/`));
