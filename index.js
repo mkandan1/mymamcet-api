@@ -61,7 +61,7 @@ app.post('/fetch/exam/data', async (req, res) => {
   try {
     const data = req.body.search_queries[0];
     const dbRef = db.ref(
-      `data/departments/${data.department}/${data.batch}/${data.academic_year}/${data.semester}/${data.exam_type}`
+      `data/departments/${data.department}/${data.batch}/academic_years/${data.academic_year}/semesters/${data.semester}/exam_type/${data.exam_type}`
     );
 
     const snaphot = await dbRef.once('value');
@@ -78,6 +78,25 @@ app.post('/fetch/exam/data', async (req, res) => {
     res.status(500).send('Internal Server Error');
   }
 });
+
+app.post('/fetch/management/batches', async (req, res)=> {
+  try{
+    const department = req.body.search_queries[0].department;
+    const dbRef = db.ref(`/data/departments/${department}`);
+
+    const snaphot = await dbRef.once('value');
+
+    if (snaphot.val() !== null) {
+      const result = Object.values(snaphot.val());
+      res.send({ result: result });
+    } else {
+      res.send({ result: null });
+    }
+  }
+  catch(e){
+    console.error(e);
+  }
+})
 
 app.get('/fetch/users/all', async (req, res) => {
   try {
@@ -99,8 +118,23 @@ app.get('/fetch/users/all', async (req, res) => {
 app.post('/add/user', async (req, res) => {
   try {
     const { name, email, password } = req.body.data;
-    console.log(name);
-    // Add user logic here
+
+    console.log(email);
+
+    getAuth(adminIntialize)
+      .createUser({
+        email: email,
+        displayName: name,
+        password: password
+      })
+      .then((userRecord) => {
+        // See the UserRecord reference doc for the contents of userRecord.
+        console.log('Successfully created new user:', userRecord.uid);
+      })
+      .catch((error) => {
+        console.log('Error creating new user:', error);
+      });
+
     res.send('User added successfully');
   } catch (error) {
     console.log(error);
