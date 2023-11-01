@@ -115,6 +115,28 @@ app.get('/fetch/users/all', async (req, res) => {
   }
 });
 
+app.post('/batches/add', async (req, res)=> {
+  const {batch, department, year, semester, academicYear, studentsList} = req.body.batch_details;
+
+  const data = {"Academic Year": academicYear, "Batch": batch, "Department": department, "Year": year, "Semester": semester, 'Students': studentsList}
+
+  const dbRef = db.ref(`/data/departments/${department}/${batch}`);
+
+  const result = await dbRef.set(data);
+
+  res.send({message: 'ok'});
+})
+
+app.get('/fetch/batches', async (req, res)=>{
+  const departmentQueries = req.query.department;
+  console.log(departmentQueries);
+  const dbRef = db.ref(`/data/departments/${departmentQueries}`)
+
+  const data = await dbRef.once('value');
+  const dataObj = {result: data.val()};
+  res.send(dataObj)
+})
+
 app.post('/add/user', async (req, res) => {
   try {
     const { name, email, password } = req.body.data;
