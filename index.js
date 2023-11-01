@@ -129,13 +129,23 @@ app.post('/batches/add', async (req, res)=> {
 
 app.get('/fetch/batches', async (req, res)=>{
   const departmentQueries = req.query.department;
-  console.log(departmentQueries);
-  const dbRef = db.ref(`/data/departments/${departmentQueries}`)
+  const batch = req.query.batch;
+  const dbRef = db.ref(`/data/departments/${departmentQueries}/`)
 
   const data = await dbRef.once('value');
   const dataObj = {result: data.val()};
   res.send(dataObj)
-})
+});
+
+app.get('/fetch/batches/batch/students', async (req, res)=>{
+  const departmentQueries = req.query.department;
+  const batch = req.query.batch;
+  const dbRef = db.ref(`/data/departments/${departmentQueries}/${batch}`)
+
+  const data = await dbRef.once('value');
+  const dataObj = {result: data.val()};
+  res.send(dataObj)
+});
 
 app.post('/add/user', async (req, res) => {
   try {
